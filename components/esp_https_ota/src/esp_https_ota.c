@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <esp_https_ota.h>
+#include <esp_http_client.h>
 #include <esp_ota_ops.h>
 #include <esp_log.h>
 #include "sdkconfig.h"
@@ -63,6 +64,13 @@ esp_err_t esp_https_ota(const esp_http_client_config_t *config)
         return err;
     }
     esp_http_client_fetch_headers(client);
+    
+    int statusCode = esp_http_client_get_status_code(client);
+    if (statusCode != 200) {
+        ESP_LOGE(TAG, "bad status code: %d", statusCode);
+        http_cleanup(client);
+        return ESP_FAIL;
+    }
 
     esp_ota_handle_t update_handle = 0;
     const esp_partition_t *update_partition = NULL;
