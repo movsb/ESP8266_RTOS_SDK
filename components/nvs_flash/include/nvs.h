@@ -361,5 +361,25 @@ void nvs_close(nvs_handle handle);
 } // extern "C"
 #endif
 
+#ifdef __cplusplus
+	#include <functional>
+	// Copy from nts/nvs_flash/src/nvs_types.hpp
+	enum class __nvs_ItemType : uint8_t {
+		U8   = 0x01,
+		I8   = 0x11,
+		U16  = 0x02,
+		I16  = 0x12,
+		U32  = 0x04,
+		I32  = 0x14,
+		U64  = 0x08,
+		I64  = 0x18,
+		SZ   = 0x21,
+		BLOB = 0x41,
+		ANY  = 0xff
+	};
+	// 不知道为什么要 extern "C" 才能链接得到。
+	extern "C" esp_err_t __nvs_for_each(const char* part, const char* ns, std::function<void(const char *part, const char* ns, const char*key, __nvs_ItemType ty)> callback);
+#endif
+
 #endif //ESP_NVS_H
 

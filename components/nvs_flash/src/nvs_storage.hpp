@@ -22,6 +22,8 @@
 #include "nvs_page.hpp"
 #include "nvs_pagemanager.hpp"
 
+#include <functional>
+
 //extern void dumpBytes(const uint8_t* data, size_t count);
 
 namespace nvs
@@ -52,6 +54,9 @@ public:
     bool isValid() const;
 
     esp_err_t createOrOpenNamespace(const char* nsName, bool canCreate, uint8_t& nsIndex);
+    
+    esp_err_t forEach(uint8_t nsIndex, std::function<void(const char *key, ItemType ty)> callback);
+    TNamespaces& namespaces() { return mNamespaces; }
 
     esp_err_t writeItem(uint8_t nsIndex, ItemType datatype, const char* key, const void* data, size_t dataSize);
 

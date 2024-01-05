@@ -458,3 +458,60 @@ extern "C" esp_err_t nvs_get_blob(nvs_handle handle, const char* key, void* out_
     return nvs_get_str_or_blob(handle, nvs::ItemType::BLOB, key, out_value, length);
 }
 
+
+extern "C" esp_err_t __nvs_for_each(const char* part, const char* ns, std::function<void(const char *part, const char* ns, const char*key, __nvs_ItemType ty)> callback) {
+    struct Handle {
+        Handle(Storage& store, const char* part, const char* ns)
+            : store(store), part(part), ns(ns) {
+                h = nvs_handle{};
+                nsIndex = 0;
+            }
+        Storage &store;
+        const char* part;
+        const char* ns;
+        nvs_handle h;
+        uint8_t nsIndex;
+        ~Handle() {
+            if (h) {
+                nvs_close(h);
+            }
+        }
+    };
+    
+    std::vector<Handle> _handles;
+
+    {
+        Lock lock;
+        for (auto &store : s_nvs_storage_list) {
+            if (part != nullptr && std::strcmp(part, store.getPartName())) {
+                continue;
+            }
+            for (const auto &namesp : store.namespaces()) {
+                if (ns != nullptr && std::strcmp(ns, namesp.mName)) {
+                    continue;
+                }
+                _handles.emplace_back(store, store.getPartName(), namesp.mName);
+            }
+        }
+    }
+    for (auto &h : _handles) {
+        nvs_handle tmp;
+        if (nvs_open_from_partition(h.part, h.ns, NVS_READONLY, &tmp) != ESP_OK) {
+            continue; // skip errors
+        }
+        HandleEntry entry;
+        if (nvs_find_ns_handle(tmp, entry) != ESP_OK) {
+            nvs_close(tmp);
+            continue;
+        }
+        h.nsIndex = entry.mNsIndex;
+    }
+    
+    for (auto & h : _handles) {
+        h.store.forEach(h.nsIndex, [&](const char *key, ItemType ty) {
+            return callback(h.part, h.ns, key, static_cast<__nvs_ItemType>(ty));
+        });
+    }
+
+    return ESP_OK;
+}

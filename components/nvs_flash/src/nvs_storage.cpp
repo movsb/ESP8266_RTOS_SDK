@@ -87,6 +87,26 @@ esp_err_t Storage::findItem(uint8_t nsIndex, ItemType datatype, const char* key,
     return ESP_ERR_NVS_NOT_FOUND;
 }
 
+esp_err_t Storage::forEach(uint8_t nsIndex, std::function<void(const char *key, ItemType ty)> callback) {
+    Item item;
+
+    for (auto it = std::begin(mPageManager); it != std::end(mPageManager); ++it) {
+        size_t itemIndex = 0;
+        for(;;) {
+            auto err = it->findItem(nsIndex, nvs::ItemType::ANY, nullptr, itemIndex, item);
+            if (err == ESP_OK) {
+                callback(item.key, item.datatype);
+                itemIndex++;
+                continue;
+            } else if (err == ESP_ERR_NVS_NOT_FOUND) {
+                break;
+            }
+            return err;
+        } 
+    }
+    return ESP_OK;
+}
+
 esp_err_t Storage::writeItem(uint8_t nsIndex, ItemType datatype, const char* key, const void* data, size_t dataSize)
 {
     if (mState != StorageState::ACTIVE) {
